@@ -1,0 +1,88 @@
+<style type="text/css">
+  tbody {
+    vertical-align: top;
+  }
+  .hour {
+    text-align: right;
+  }
+  .overcost-normal {
+  }
+  .overcost-attension {
+     background: #ffffcc;
+  }
+  .overcost-caution {
+     background: #ffcccc;
+  }
+</style>
+
+<h2>全体</h2>
+<table border="1">
+  <tr>
+    <th>見積(h)</th>
+    <th>計画(h)</th>
+    <th>作業(h)</th>
+    <th>見積計画比 (%)</th>
+    <th>見積実績比 (%)</th>
+    <th>計画実績比 (%)</th>
+  </tr>
+  <tr>
+    <td><%= l_hour(@total_rfp_hours) %></td>
+    <td><%= l_hour(@total_estimated_hours) %></td>
+    <td><%= l_hour(@total_spent_hours) %></td>
+    <td><%= l_hour(@total_estimated_hours / @total_rfp_hours * 100) %></td>
+    <td><%= l_hour(@total_spent_hours / @total_rfp_hours * 100) %></td>
+    <td><%= l_hour(@total_spent_hours / @total_estimated_hours * 100) %></td>
+  </tr>
+</table>
+
+<h2>計画時間残り</h2>
+<%= l_hours(@total_rfp_hours - @total_estimated_hours) %>
+
+<h2>作業時間残り</h2>
+<%= l_hours(@total_rfp_hours - @total_spent_hours) %>
+
+<h2>時間の使い方履歴</h2>
+<script type="text/javascript" src="/javascripts/swfobject.js"></script>
+<%= @graph %>
+
+<h2>詳細</h2>
+<table border="1">
+  <tr>
+    <th>スプリント</th>
+    <th>計画(h)</th>
+    <th>作業(h)</th>
+    <th>ストーリー</th>
+    <th>予定工数</th>
+    <th>作業時間</th>
+    <th>タスク</th>
+    <th>担当</th>
+    <th>予定工数</th>
+    <th>作業時間</th>
+  </tr>
+  <% @sprints.each do |sprint| %>
+    <tr>
+      <td rowspan="<%= rowspan_sprint(sprint) %>"><%= link_to(h(sprint.name), :controller => 'versions', :action => 'show', :id => sprint) %></td>
+      <td rowspan="<%= rowspan_sprint(sprint) %>" class="hour"><%= l_hour(sprint.estimated_hours) %></td>
+      <td rowspan="<%= rowspan_sprint(sprint) %>" class="hour"><%= l_hour(sprint.spent_hours) %></td>
+
+    <% sprint.stories.each do |story| %>
+      <tr class="<%= class_overcost(story) %>">
+        <td rowspan="<%= rowspan_story(story) %>"><%= link_to_issue(story) %></td>
+        <td rowspan="<%= rowspan_story(story) %>" class="hour"><%= l_hour(story.estimated_hours) %></td>
+        <td rowspan="<%= rowspan_story(story) %>" class="hour"><%= l_hour(story.spent_hours) %></td>
+
+        <% story.children.each do |task| %>
+          <tr class="<%= class_overcost(task) %>">
+            <td><%= link_to_issue(task) %></td>
+            <td><%= link_to_user(task.assigned_to) %></td>
+            <td class="hour"><%= l_hour(task.estimated_hours) %></td>
+            <td class="hour"><%= l_hour(task.spent_hours) %></td>
+          </tr>
+        <% end %>
+
+      </tr>
+    <% end %>
+
+    </tr>
+  <% end %>
+</table>
