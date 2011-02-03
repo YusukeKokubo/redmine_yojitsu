@@ -101,6 +101,17 @@ class YojitsuController < ApplicationController
 
   def show
     @graph = open_flash_chart_object(900, 600, "/yojitsu/graph_code/#{params[:id]}")
+    
+    @category_time_entries = {}
+    @sprints.each do |sprint|
+      sprint.stories.each do |story|
+        story.tasks.each do |task|
+          category = task.category || IssueCategory.new(:name => "カテゴリなし")
+          @category_time_entries[category.name] ||= 0
+          @category_time_entries[category.name] += task.spent_hours
+        end
+      end
+    end
   end
 
   private
