@@ -5,9 +5,7 @@ module YojitsuHelper
   end
 
   def rowspan_sprint(sprint)
-    sprint.stories.count + sprint.stories.inject(0) do |sum, story|
-      sum + story.children.count
-    end + 1
+    sprint.stories.count + 1
   end
 
   def rowspan_story(story)

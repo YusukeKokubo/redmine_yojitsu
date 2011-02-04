@@ -13,6 +13,9 @@
   .overcost-caution {
      background: #ffcccc;
   }
+  .tasks {
+     display: none;
+  }
 </style>
 
 <h2>全体</h2>
@@ -69,9 +72,6 @@
     <th>予定工数</th>
     <th>作業時間</th>
     <th>タスク</th>
-    <th>担当</th>
-    <th>予定工数</th>
-    <th>作業時間</th>
   </tr>
   <% @sprints.each do |sprint| %>
     <tr>
@@ -81,10 +81,17 @@
 
     <% sprint.stories.each do |story| %>
       <tr class="<%= class_overcost(story) %>">
-        <td rowspan="<%= rowspan_story(story) %>"><%= link_to_issue(story) %></td>
-        <td rowspan="<%= rowspan_story(story) %>" class="hour"><%= l_hour(story.estimated_hours) %></td>
-        <td rowspan="<%= rowspan_story(story) %>" class="hour"><%= l_hour(story.spent_hours) %></td>
-
+        <td><%= link_to_issue(story) %></td>
+        <td class="hour"><%= l_hour(story.estimated_hours) %></td>
+        <td class="hour"><%= l_hour(story.spent_hours) %></td>
+        <td><a href="" onclick="if ($('task<%= story.id %>').style.display=='none' || $('task<%= story.id %>').style.display=='') {$('task<%= story.id %>').style.display='block';} else {$('task<%= story.id %>').style.display='none';} return false;">詳細</a></td>
+        <td><table class="tasks" id="task<%= story.id %>">
+          <tr>
+            <th>タスク</th>
+            <th>担当</th>
+            <th>予定工数</th>
+            <th>作業時間</th>
+          </tr>
         <% story.children.each do |task| %>
           <tr class="<%= class_overcost(task) %>">
             <td><%= link_to_issue(task) %></td>
@@ -93,6 +100,7 @@
             <td class="hour"><%= l_hour(task.spent_hours) %></td>
           </tr>
         <% end %>
+        </table></td>
 
       </tr>
     <% end %>
