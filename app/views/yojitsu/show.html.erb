@@ -50,7 +50,7 @@
     <th>カテゴリ</th>
     <th>作業時間</th>
   </tr>
-<% @category_time_entries.each do |name, time| %>
+<% @category_time_entries.sort.each do |name, time| %>
   <tr>
     <td><%= name %></td>
     <td><%= time %></td>

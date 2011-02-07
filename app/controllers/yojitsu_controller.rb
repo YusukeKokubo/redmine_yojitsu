@@ -105,7 +105,7 @@ class YojitsuController < ApplicationController
     @category_time_entries = {}
     @sprints.each do |sprint|
       sprint.stories.each do |story|
-        story.tasks.each do |task|
+        story.children.each do |task|
           category = task.category || IssueCategory.new(:name => "カテゴリなし")
           @category_time_entries[category.name] ||= 0
           @category_time_entries[category.name] += task.spent_hours
