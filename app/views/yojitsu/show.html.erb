@@ -38,11 +38,8 @@
   </tr>
 </table>
 
-<h2>計画時間残り</h2>
-<%= l_hours(@total_rfp_hours - @total_estimated_hours) %>
-
-<h2>作業時間残り</h2>
-<%= l_hours(@total_rfp_hours - @total_spent_hours) %>
+<p>見積(<%= l_hour(@total_rfp_hours) %>) - 計画(<%= l_hour(@total_estimated_hours)%>) = <%= l_hours(@total_rfp_hours - @total_estimated_hours) %></p>
+<p>見積(<%= l_hour(@total_rfp_hours) %>) - 作業(<%= l_hour(@total_spent_hours)%>) = <%= l_hours(@total_rfp_hours - @total_spent_hours) %></p>
 
 <h2>カテゴリ別時間集計</h2>
 <table>
@@ -51,6 +48,20 @@
     <th>作業時間</th>
   </tr>
 <% @category_time_entries.sort.each do |name, time| %>
+  <tr>
+    <td><%= name %></td>
+    <td><%= time %></td>
+  </tr>
+<% end %>
+</table>
+
+<h2>トラッカー別時間集計</h2>
+<table>
+  <tr>
+    <th>トラッカー</th>
+    <th>作業時間</th>
+  </tr>
+<% @tracker_time_entries.sort.each do |name, time| %>
   <tr>
     <td><%= name %></td>
     <td><%= time %></td>

@@ -103,6 +103,7 @@ class YojitsuController < ApplicationController
     @graph = open_flash_chart_object(900, 600, "/yojitsu/graph_code/#{params[:id]}")
     
     @category_time_entries = {}
+    @tracker_time_entries = {}
     @sprints.each do |sprint|
       sprint.stories.each do |story|
         story.children.each do |task|
@@ -110,6 +111,9 @@ class YojitsuController < ApplicationController
           @category_time_entries[category.name] ||= 0
           @category_time_entries[category.name] += task.spent_hours
         end
+        tracker = story.tracker
+        @tracker_time_entries[tracker.name] ||= 0
+        @tracker_time_entries[tracker.name] += story.spent_hours
       end
     end
   end
