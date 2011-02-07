@@ -8,74 +8,97 @@
   .overcost-normal {
   }
   .overcost-attension {
-     background: #ffffcc;
+     color: #ff9900;
   }
   .overcost-caution {
-     background: #ffcccc;
+     color: #ff0000;
   }
   .tasks {
      display: none;
   }
+
+  table.total_times {
+    width: 30%;
+  }
+  table.category-times {
+    width: 20%;
+  }
+  table.tracker-times {
+    width: 20%;
+  }
+  table.detail {
+    width: auto;
+  }
 </style>
 
-<h2>全体</h2>
-<table border="1">
-  <tr>
+<h2>予実</h2>
+
+<h3>全体</h3>
+<table class="list total_times">
+  <thead><tr>
     <th>見積(h)</th>
     <th>計画(h)</th>
     <th>作業(h)</th>
     <th>見積計画比 (%)</th>
     <th>見積実績比 (%)</th>
     <th>計画実績比 (%)</th>
-  </tr>
-  <tr>
+  </tr></thead>
+  <tbody><tr>
     <td><%= l_hour(@total_rfp_hours) %></td>
     <td><%= l_hour(@total_estimated_hours) %></td>
     <td><%= l_hour(@total_spent_hours) %></td>
     <td><%= l_hour(@total_estimated_hours / @total_rfp_hours * 100) %></td>
     <td><%= l_hour(@total_spent_hours / @total_rfp_hours * 100) %></td>
     <td><%= l_hour(@total_spent_hours / @total_estimated_hours * 100) %></td>
-  </tr>
+  </tr></tbody>
 </table>
 
 <p>見積(<%= l_hour(@total_rfp_hours) %>) - 計画(<%= l_hour(@total_estimated_hours)%>) = <%= l_hours(@total_rfp_hours - @total_estimated_hours) %></p>
 <p>見積(<%= l_hour(@total_rfp_hours) %>) - 作業(<%= l_hour(@total_spent_hours)%>) = <%= l_hours(@total_rfp_hours - @total_spent_hours) %></p>
 
-<h2>カテゴリ別時間集計</h2>
-<table>
-  <tr>
+<h3>カテゴリ別時間集計</h3>
+<table class="list category-times">
+  <thead><tr>
     <th>カテゴリ</th>
     <th>作業時間</th>
-  </tr>
+  </tr></thead>
+  <tbody>
 <% @category_time_entries.sort.each do |name, time| %>
-  <tr>
+  <tr class="<%= cycle 'odd', 'even' %>">
     <td><%= name %></td>
     <td><%= time %></td>
   </tr>
 <% end %>
+  </tbody>
 </table>
 
-<h2>トラッカー別時間集計</h2>
-<table>
-  <tr>
+<h3>トラッカー別時間集計</h3>
+<table class="list tracker-times">
+  <thead><tr>
     <th>トラッカー</th>
     <th>作業時間</th>
-  </tr>
+  </tr></thead>
+  <tbody>
 <% @tracker_time_entries.sort.each do |name, time| %>
-  <tr>
+  <tr class="<%= cycle 'odd', 'even' %>">
     <td><%= name %></td>
     <td><%= time %></td>
   </tr>
 <% end %>
+  </tbody>
 </table>
 
-<h2>時間の使い方履歴</h2>
+<h3>時間の使い方履歴</h3>
 <script type="text/javascript" src="/javascripts/swfobject.js"></script>
 <%= @graph %>
 
-<h2>詳細</h2>
-<table border="1">
-  <tr>
+<h3>詳細</h3>
+<dl>
+  <dt class="overcost-caution">赤字</dt><dd>予定時間を二割を超えて超過</dd>
+  <dt class="overcost-attension">橙色</dt><dd>予定時間の二割まで超過</dd>
+</dl>
+<table class="list detail">
+  <thead><tr>
     <th>スプリント</th>
     <th>計画(h)</th>
     <th>作業(h)</th>
@@ -83,7 +106,8 @@
     <th>予定工数</th>
     <th>作業時間</th>
     <th>タスク</th>
-  </tr>
+  </tr></thead>
+  <tbody>
   <% @sprints.each do |sprint| %>
     <tr>
       <td rowspan="<%= rowspan_sprint(sprint) %>"><%= link_to(h(sprint.name), :controller => 'versions', :action => 'show', :id => sprint) %></td>
@@ -91,7 +115,7 @@
       <td rowspan="<%= rowspan_sprint(sprint) %>" class="hour"><%= l_hour(sprint.spent_hours) %></td>
 
     <% sprint.stories.each do |story| %>
-      <tr class="<%= class_overcost(story) %>">
+      <tr class="<%= class_overcost(story) %> <%= cycle 'odd', 'even' %>">
         <td><%= link_to_issue(story) %></td>
         <td class="hour"><%= l_hour(story.estimated_hours) %></td>
         <td class="hour"><%= l_hour(story.spent_hours) %></td>
@@ -122,4 +146,5 @@
 
     </tr>
   <% end %>
+  </tbody>
 </table>
