@@ -1,3 +1,5 @@
+require 'set'
+
 class YojitsuController < ApplicationController
   unloadable
   before_filter :setup
@@ -26,14 +28,10 @@ class YojitsuController < ApplicationController
     estimated_hours_line.dot_size = 5
     estimated_hours_line.colour = '#336600'
 
-    total = 0
-    time_entries = []
-    rfp_hours = []
-    estimated_hours = []
-    labels = []
     start_date = @project.time_entries.minimum('spent_on').to_date
     end_date   = @project.time_entries.maximum('spent_on').to_date
 
+    # 開始週～終了週までをつくる
     @weeks = []
     start_week, end_week = start_date.cweek, end_date.cweek
     if start_week <= end_week
@@ -43,14 +41,24 @@ class YojitsuController < ApplicationController
         1.upto(end_week)    { |week| @weeks << week }
     end
 
+    # 週ごとに時間を計算する
+    total_time_spent = 0.0
+    total_estimated_hours = Set.new
+    time_entries = []
+    rfp_hours = []
+    estimated_hours = []
+    labels = []
     @weeks.each do |week|
-        ts = @project.time_entries.select do |t|
-            t.spent_on.cweek == week
+        ts = @project.time_entries.select { |t| t.spent_on.cweek == week }
+        total_time_spent += ts.inject(0.0) {|sum, t| sum += t.hours}
+        ts.each do |time_entry|
+          next unless time_entry.issue
+          next unless time_entry.issue.estimated_hours
+          total_estimated_hours << time_entry.issue
         end
-        total += ts.inject(0.0) {|sum, t| sum += t.hours}
-        time_entries << total
-        rfp_hours << @total_rfp_hours
-        estimated_hours << @total_estimated_hours
+        time_entries << total_time_spent
+        estimated_hours << total_estimated_hours.inject(0.0) {|sum, i| sum += i.estimated_hours}
+        rfp_hours << @total_rfp_hours # 見積もり時間は固定
 
         if ts.empty?
           labels << "-"
@@ -68,7 +76,7 @@ class YojitsuController < ApplicationController
     x.set_labels(x_labels)
 
     y = YAxis.new
-    y_max = (total > @total_rfp_hours ? total : @total_rfp_hours) + 20
+    y_max = (total_time_spent > @total_rfp_hours ? total_time_spent : @total_rfp_hours) + 20
     y_step = case y_max
            when 0..100
                y_step = 10
@@ -144,14 +152,14 @@ class YojitsuController < ApplicationController
     end
 
     # add backlog hours to estimated and spent hours
-    #@backlog = Story.product_backlog(@project)
-    #@backlog.each do |task|
-    #  if task.estimated_hours
-    #    @total_estimated_hours += task.estimated_hours
-    #  end
-    #  if task.spent_hours
-    #    @total_spent_hours += task.spent_hours
-    #  end
-    #end
+    @backlog = Story.product_backlog(@project)
+    @backlog.each do |task|
+      if task.estimated_hours
+        @total_estimated_hours += task.estimated_hours
+      end
+      if task.spent_hours
+        @total_spent_hours += task.spent_hours
+      end
+    end
   end
 end
