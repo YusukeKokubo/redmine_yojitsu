@@ -70,9 +70,8 @@ class YojitsuController < ApplicationController
     rfp_hours_line.values = rfp_hours
     estimated_hours_line.values = estimated_hours
 
-    x_labels = XAxisLabels.new
+    x_labels = XAxisLabels.new(:rotate => 60)
     x_labels.labels = labels
-    x_labels.set_vertical
     x = XAxis.new
     x.set_labels(x_labels)
 
