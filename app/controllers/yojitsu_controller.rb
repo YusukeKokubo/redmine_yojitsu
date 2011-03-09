@@ -50,20 +50,20 @@ class YojitsuController < ApplicationController
     labels = []
     @weeks.each do |week|
         ts = @project.time_entries.select { |t| t.spent_on.cweek == week }
-        total_time_spent += ts.inject(0.0) {|sum, t| sum += t.hours}
+        total_time_spent += ts.inject(0.0) {|sum, t| sum + t.hours}
         ts.each do |time_entry|
           next unless time_entry.issue
           next unless time_entry.issue.estimated_hours
           total_estimated_hours << time_entry.issue
         end
         time_entries << total_time_spent
-        estimated_hours << total_estimated_hours.inject(0.0) {|sum, i| sum += i.estimated_hours}
+        estimated_hours << total_estimated_hours.inject(0.0) {|sum, i| sum + i.estimated_hours}
         rfp_hours << @total_rfp_hours # 見積もり時間は固定
 
         if ts.empty?
           labels << "-"
         else
-          labels << ts.max_by{|t| t.spent_on}.spent_on.strftime("%m %d")
+          labels << ts.max_by(&:spent_on).spent_on.strftime("%m / %d")
         end
     end
     time_entries_line.values = time_entries
@@ -72,11 +72,12 @@ class YojitsuController < ApplicationController
 
     x_labels = XAxisLabels.new
     x_labels.labels = labels
+    x_labels.set_vertical
     x = XAxis.new
     x.set_labels(x_labels)
 
     y = YAxis.new
-    y_max = (total_time_spent > @total_rfp_hours ? total_time_spent : @total_rfp_hours) + 20
+    y_max = [total_time_spent, @total_rfp_hours].max + 20
     y_step = case y_max
            when 0..100
                y_step = 10
