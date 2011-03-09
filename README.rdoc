@@ -1,3 +1,5 @@
 = yojitsu
 
-Description goes here
+redmine_yojitsuは予実を見るための画面を提供するプラグインです。
+このプラグインはRedmine Backlogsプラグイン、OpenFlashChartプラグインに依存しています。
+見積もり時間を使う場合はプロジェクトのカスタムフィールドの0番目に実数型のフィールドを設定してください。
