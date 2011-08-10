@@ -1,6 +1,6 @@
 require 'redmine'
 
-Redmine::Plugin.register :redmine_work_time do
+Redmine::Plugin.register :redmine_yojitsu do
   name 'Redmine Yojitsu plugin'
   author 'Yusuke Kokubo'
   description 'to view different of estimate hours and spent hours by each project.'
