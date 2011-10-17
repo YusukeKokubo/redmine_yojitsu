@@ -53,11 +53,12 @@ class YojitsuController < ApplicationController
         total_time_spent += ts.inject(0.0) {|sum, t| sum + t.hours}
         ts.each do |time_entry|
           next unless time_entry.issue
-          next unless time_entry.issue.estimated_hours
+          next unless time_entry.issue.leaf?
+          next unless time_entry.issue.initial_estimate
           total_estimated_hours << time_entry.issue
         end
         time_entries << total_time_spent
-        estimated_hours << total_estimated_hours.inject(0.0) {|sum, i| sum + i.estimated_hours}
+        estimated_hours << total_estimated_hours.inject(0.0) {|sum, i| sum + i.initial_estimate}
         rfp_hours << @total_rfp_hours # 見積もり時間は固定
 
         if ts.empty?
@@ -111,18 +112,31 @@ class YojitsuController < ApplicationController
     @graph = open_flash_chart_object(900, 600, "/yojitsu/graph_code/#{params[:id]}")
     
     @category_time_entries = {}
+    @category_estimated_hours = {}
     @tracker_time_entries = {}
+    @tracker_estimated_hours = {}
     @sprints.each do |sprint|
       sprint.stories.each do |story|
         story.children.each do |task|
           category = task.category || IssueCategory.new(:name => "カテゴリなし")
           @category_time_entries[category.name] ||= 0
           @category_time_entries[category.name] += task.spent_hours
+          @category_estimated_hours[category.name] ||= 0
+          @category_estimated_hours[category.name] += task.initial_estimate if task.initial_estimate
         end
         tracker = story.tracker
         @tracker_time_entries[tracker.name] ||= 0
         @tracker_time_entries[tracker.name] += story.spent_hours
+        @tracker_estimated_hours[tracker.name] ||= 0
+        @tracker_estimated_hours[tracker.name] += story.initial_estimate if story.initial_estimate
       end
+    end
+    @backlog.each do |task|
+      category = task.category || IssueCategory.new(:name => "カテゴリなし")
+      @category_estimated_hours[category.name] ||= 0
+      @category_estimated_hours[category.name] += task.initial_estimate if task.initial_estimate
+      @category_time_entries[category.name] ||= 0
+      @category_time_entries[category.name] += task.spent_hours if task.spent_hours
     end
   end
 
@@ -132,7 +146,7 @@ class YojitsuController < ApplicationController
 
     # Sprints
     # ※BacklogsプラグインのSprintは将来的にVersionと同一視されなくなるので注意
-    @sprints = Sprint.find(:all, 
+    @sprints = RbSprint.find(:all, 
                            :order => 'sprint_start_date ASC, effective_date ASC',
                            :conditions => ["project_id = ?", @project.id])
 
@@ -141,8 +155,8 @@ class YojitsuController < ApplicationController
 
     # estimated hours
     @total_estimated_hours = @sprints.inject(0.0) do |sum, sprint|
-      next sum unless sprint.estimated_hours
-      sum + sprint.estimated_hours
+      next sum unless sprint.initial_estimate
+      sum + sprint.initial_estimate
     end
 
     # spent hours
@@ -152,14 +166,22 @@ class YojitsuController < ApplicationController
     end
 
     # add backlog hours to estimated and spent hours
-    @backlog = Story.product_backlog(@project)
+    @backlog = RbStory.product_backlog(@project)
     @backlog.each do |task|
-      if task.estimated_hours
-        @total_estimated_hours += task.estimated_hours
-      end
-      if task.spent_hours
-        @total_spent_hours += task.spent_hours
-      end
+      @total_estimated_hours += task.initial_estimate if task.initial_estimate
+      @total_spent_hours += task.spent_hours if task.spent_hours
+    end
+    
+    @issue_trackers = @project.trackers.all.delete_if {|t| t.id == RbTask.tracker or RbStory.trackers.include?(t.id) }
+    @issues = RbStory.find(
+                     :all, 
+                     :conditions => ["project_id=? AND tracker_id in (?)", @project, @issue_trackers],
+                     :order => "position ASC"
+                    )
+
+    @total_spent_hours += @issues.inject(0.0) do |sum, issue|
+      next sum unless issue.spent_hours
+      sum + issue.spent_hours
     end
   end
 end

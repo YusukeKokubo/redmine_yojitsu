@@ -1,4 +1,5 @@
 require 'redmine'
+require_dependency 'yojitsu_version_patch'
 
 Redmine::Plugin.register :redmine_yojitsu do
   name 'Redmine Yojitsu plugin'
