@@ -64,10 +64,10 @@
     <th>作業時間</th>
   </tr></thead>
   <tbody>
-<% @category_time_entries.sort.each do |name, time| %>
+<% @category_time_entries.sort.each do |category, time| %>
   <tr class="<%= cycle 'odd', 'even' %>">
-    <td><%= name %></td>
-    <td><%= l_hour(@category_estimated_hours[name]) %></td>
+    <td><%= link_to category, {:project_id => @project, :controller => 'issues', :set_filter => 1, :category_id => category, :status_id => '*'}, :class => 'issue_anchor', :target => '_blank' %></td>
+    <td><%= l_hour(@category_estimated_hours[category]) %></td>
     <td><%= l_hour(time) %></td>
   </tr>
 <% end %>
@@ -82,10 +82,10 @@
     <th>作業時間</th>
   </tr></thead>
   <tbody>
-<% @tracker_time_entries.sort.each do |name, time| %>
+<% @tracker_time_entries.sort.each do |tracker, time| %>
   <tr class="<%= cycle 'odd', 'even' %>">
-    <td><%= name %></td>
-    <td><%= l_hour(@tracker_estimated_hours[name]) %></td>
+    <td><%= link_to tracker, {:project_id => @project, :controller => 'issues', :set_filter => 1, :tracker_id => tracker, :status_id => '*'}, :class => 'issue_anchor', :target => '_blank' %></td>
+    <td><%= l_hour(@tracker_estimated_hours[tracker]) %></td>
     <td><%= l_hour(time) %></td>
   </tr>
 <% end %>
@@ -117,7 +117,7 @@
     <% effective_date = sprint.effective_date    && sprint.effective_date.strftime("%m/%d") %>
     <tr>
       <td rowspan="<%= rowspan_sprint(sprint) %>"><%= link_to(h(sprint.name), :controller => 'versions', :action => 'show', :id => sprint) %><br /><%= start_date %> - <%= effective_date %></td>
-      <td rowspan="<%= rowspan_sprint(sprint) %>" class="hour"><%= l_hour(sprint.initial_estimate) %></td>
+      <td rowspan="<%= rowspan_sprint(sprint) %>" class="hour"><%= l_hour(sprint.estimated_hours) %></td>
       <td rowspan="<%= rowspan_sprint(sprint) %>" class="hour"><%= l_hour(sprint.spent_hours) %></td>
 
     <% sprint.stories.each do |story| %>
@@ -144,3 +144,38 @@
     </tr>
   </tbody>
 </table>
+
+<h3>問題</h3>
+<table class="list detail">
+  <thead><tr>
+    <th>issue</th>
+    <% @problem_issues[0] and @problem_issues[0].available_custom_fields.each do |f| %>
+      <th><%= f.name %></th>
+    <% end %>
+  </tr></thead>
+  <tbody>
+    <% @problem_issues.each do |issue| %>
+      <tr>
+        <td><%= link_to_issue(issue) %></td>
+        <% issue.custom_values.each do |value| %>
+          <td><%= value %></td>
+        <% end %>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<h3>振り返る</h3>
+<table class="list detail">
+  <thead><tr>
+    <th>issue</th>
+  </tr></thead>
+  <tbody>
+    <% @thinkback_issues.each do |issue| %>
+      <tr>
+        <td><%= link_to_issue(issue) %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+

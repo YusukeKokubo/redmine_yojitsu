@@ -54,11 +54,11 @@ class YojitsuController < ApplicationController
         ts.each do |time_entry|
           next unless time_entry.issue
           next unless time_entry.issue.leaf?
-          next unless time_entry.issue.initial_estimate
+          next unless time_entry.issue.estimated_hours
           total_estimated_hours << time_entry.issue
         end
         time_entries << total_time_spent
-        estimated_hours << total_estimated_hours.inject(0.0) {|sum, i| sum + i.initial_estimate}
+        estimated_hours << total_estimated_hours.inject(0.0) {|sum, i| sum + i.estimated_hours}
         rfp_hours << @total_rfp_hours # 見積もり時間は固定
 
         if ts.empty?
@@ -115,29 +115,26 @@ class YojitsuController < ApplicationController
     @category_estimated_hours = {}
     @tracker_time_entries = {}
     @tracker_estimated_hours = {}
-    @sprints.each do |sprint|
-      sprint.stories.each do |story|
-        story.children.each do |task|
-          category = task.category || IssueCategory.new(:name => "カテゴリなし")
-          @category_time_entries[category.name] ||= 0
-          @category_time_entries[category.name] += task.spent_hours
-          @category_estimated_hours[category.name] ||= 0
-          @category_estimated_hours[category.name] += task.initial_estimate if task.initial_estimate
-        end
-        tracker = story.tracker
-        @tracker_time_entries[tracker.name] ||= 0
-        @tracker_time_entries[tracker.name] += story.spent_hours
-        @tracker_estimated_hours[tracker.name] ||= 0
-        @tracker_estimated_hours[tracker.name] += story.initial_estimate if story.initial_estimate
-      end
+    nilCategory = IssueCategory.new(:name => "カテゴリなし")
+    nilTracker = Tracker.new(:name => "Trackerなし")
+    @project.issues.each do |issue|
+      next unless issue.leaf?
+      category = issue.category || nilCategory
+      @category_estimated_hours[category] ||= 0
+      @category_estimated_hours[category] += issue.estimated_hours if issue.estimated_hours
+      @category_time_entries[category] ||= 0
+      @category_time_entries[category] += issue.spent_hours if issue.spent_hours
+      tracker = issue.is_task? ? (issue.parent ? issue.parent.tracker : nilTracker) : issue.tracker
+      @tracker_time_entries[tracker] ||= 0
+      @tracker_time_entries[tracker] += issue.spent_hours
+      @tracker_estimated_hours[tracker] ||= 0
+      @tracker_estimated_hours[tracker] += issue.estimated_hours if issue.estimated_hours
     end
-    @backlog.each do |task|
-      category = task.category || IssueCategory.new(:name => "カテゴリなし")
-      @category_estimated_hours[category.name] ||= 0
-      @category_estimated_hours[category.name] += task.initial_estimate if task.initial_estimate
-      @category_time_entries[category.name] ||= 0
-      @category_time_entries[category.name] += task.spent_hours if task.spent_hours
-    end
+
+    @problem_issues = Issue.find(:all,
+                                 :conditions => ["project_id = ? and tracker_id = ?", @project.id, 38])
+
+    @thinkback_issues = @project.issues.select {|i| i.custom_values[0] and i.custom_values[0].value == "1"}
   end
 
   private
@@ -153,35 +150,19 @@ class YojitsuController < ApplicationController
     # rfp hours
     @total_rfp_hours = @project.custom_values[0] ? @project.custom_values[0].to_s.to_f : 0.0
 
-    # estimated hours
-    @total_estimated_hours = @sprints.inject(0.0) do |sum, sprint|
-      next sum unless sprint.initial_estimate
-      sum + sprint.initial_estimate
+    @total_estimated_hours = 0.0
+    @total_spent_hours = 0.0
+    @project.issues.each do |i|
+      next unless i.leaf?
+      @total_estimated_hours += i.estimated_hours if i.estimated_hours
+      @total_spent_hours += i.spent_hours if i.spent_hours
     end
-
-    # spent hours
-    @total_spent_hours = @sprints.inject(0.0) do |sum, sprint|
-      next sum unless sprint.spent_hours
-      sum + sprint.spent_hours
-    end
-
-    # add backlog hours to estimated and spent hours
     @backlog = RbStory.product_backlog(@project)
-    @backlog.each do |task|
-      @total_estimated_hours += task.initial_estimate if task.initial_estimate
-      @total_spent_hours += task.spent_hours if task.spent_hours
-    end
-    
     @issue_trackers = @project.trackers.all.delete_if {|t| t.id == RbTask.tracker or RbStory.trackers.include?(t.id) }
     @issues = RbStory.find(
                      :all, 
                      :conditions => ["project_id=? AND tracker_id in (?)", @project, @issue_trackers],
                      :order => "position ASC"
                     )
-
-    @total_spent_hours += @issues.inject(0.0) do |sum, issue|
-      next sum unless issue.spent_hours
-      sum + issue.spent_hours
-    end
   end
 end
