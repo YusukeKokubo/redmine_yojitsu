@@ -115,6 +115,7 @@ class YojitsuController < ApplicationController
     @category_estimated_hours = {}
     @tracker_time_entries = {}
     @tracker_estimated_hours = {}
+    @activities_spent_hours = {}
     nilCategory = IssueCategory.new(:name => "カテゴリなし")
     nilTracker = Tracker.new(:name => "Trackerなし")
     @project.issues.each do |issue|
@@ -129,8 +130,12 @@ class YojitsuController < ApplicationController
       @tracker_time_entries[tracker] += issue.spent_hours
       @tracker_estimated_hours[tracker] ||= 0
       @tracker_estimated_hours[tracker] += issue.estimated_hours if issue.estimated_hours
-    end
 
+      issue.time_entries.each do |ts|
+        @activities_spent_hours[ts.activity.name] ||= 0
+        @activities_spent_hours[ts.activity.name] += ts.hours
+      end
+    end
     @problem_issues = Issue.find(:all,
                                  :conditions => ["project_id = ? and tracker_id = ?", @project.id, 38])
 
