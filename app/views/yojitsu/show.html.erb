@@ -108,6 +108,24 @@
   </tbody>
 </table>
 
+<% @custom_spent_hours.each_pair do |name, hours| %>
+  <h3><%= name %></h3>
+  <table class="list tracker-times">
+    <thead><tr>
+      <th>活動</th>
+      <th>作業時間</th>
+    </tr></thead>
+    <tbody>
+    <% hours.sort.each do |activity, time| %>
+      <tr class="<%= cycle 'odd', 'even' %>">
+        <td><%= activity %></td>
+        <td><%= l_hour(time) %></td>
+      </tr>
+    <% end %>
+    </tbody>
+  </table>
+<% end %>
+
 <h3>時間の使い方履歴</h3>
 <script type="text/javascript" src="/javascripts/swfobject.js"></script>
 <%= @graph %>
