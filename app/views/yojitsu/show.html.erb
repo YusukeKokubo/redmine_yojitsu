@@ -130,6 +130,11 @@
 <script type="text/javascript" src="/javascripts/swfobject.js"></script>
 <%= @graph %>
 
+<h3>メンバーごとの予実</h3>
+<% @usertimes.each do |usertime| %>
+  <%= usertime %>
+<% end %>
+
 <h3>詳細</h3>
 <dl>
   <dt class="overcost-caution">赤字</dt><dd>予定時間を二割を超えて超過</dd>
