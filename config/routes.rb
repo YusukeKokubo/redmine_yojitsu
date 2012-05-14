@@ -1,5 +1,6 @@
 ActionController::Routing::Routes.draw do |map|
 
-  map.connect ':controller/:action/:id/:user_id'
+  map.connect 'yojitsu/:action/:id/:user_id', :controller => :yojitsu
 
 end
+
