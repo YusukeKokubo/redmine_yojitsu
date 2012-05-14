@@ -4,6 +4,10 @@ class YojitsuController < ApplicationController
   unloadable
   before_filter :setup, :except => :usertime
 
+  GraphColours = ["#0066ff", "#006600", "#3366ff", 
+                  "#336600", "#6666ff", "#666600", 
+                  "#9966ff", "#cc66ff", "#cc6600"]
+
   def graph_code
     title = Title.new("time entries history.")
 
@@ -108,6 +112,48 @@ class YojitsuController < ApplicationController
     render :text => chart.to_s
   end
 
+  def trackertime
+    @project = Project.find(params[:id])
+    pie = Pie.new
+    pie.colours = GraphColours
+
+    @time_entries = {}
+    nilTracker = Tracker.new(:name => "Trackerなし")
+    @project.issues.each do |issue|
+      next unless issue.leaf?
+      tracker = issue.is_task? ? (issue.parent ? issue.parent.tracker : nilTracker) : issue.tracker
+      @time_entries[tracker] ||= 0
+      @time_entries[tracker] += issue.spent_hours
+    end
+
+    pie.values = @time_entries.map{|name, hour| PieValue.new(hour, "#{name}")}
+    chart = OpenFlashChart.new
+    chart.set_title(Title.new("Tracker"))
+    chart.add_element(pie)
+    render :text => chart.to_s
+  end
+
+ def activitytime
+    @project = Project.find(params[:id])
+    pie = Pie.new
+    pie.colours = GraphColours
+
+    @spent_hours = {}
+    @project.issues.each do |issue|
+      next unless issue.leaf?
+      issue.time_entries.each do |ts|
+        @spent_hours[ts.activity.name] ||= 0
+        @spent_hours[ts.activity.name] += ts.hours
+      end
+    end
+
+    pie.values = @spent_hours.map{|name, hour| PieValue.new(hour, "#{name}")}
+    chart = OpenFlashChart.new
+    chart.set_title(Title.new("Activity"))
+    chart.add_element(pie)
+    render :text => chart.to_s
+  end
+
   def usertime
     @user = User.find(params[:user_id])
     @project = Project.find(params[:id])
@@ -126,6 +172,8 @@ class YojitsuController < ApplicationController
   end
 
   def show
+    @trackertime = open_flash_chart_object(300, 200, "/yojitsu/trackertime/#{params[:id]}")
+    @activitytime = open_flash_chart_object(300, 200, "/yojitsu/activitytime/#{params[:id]}")
     @graph = open_flash_chart_object(900, 600, "/yojitsu/graph_code/#{params[:id]}")
     @usertimes = @project.members \
       .select {|u| @project.time_entries.map(&:user).include? u.user} \
