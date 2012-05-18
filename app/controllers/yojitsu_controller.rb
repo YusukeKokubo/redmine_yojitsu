@@ -2,6 +2,7 @@ require 'set'
 
 class YojitsuController < ApplicationController
   unloadable
+  include YojitsuHelper
   before_filter :setup, :except => :usertime
 
   GraphColours = ["#0066ff", "#006600", "#3366ff", 
@@ -163,10 +164,29 @@ class YojitsuController < ApplicationController
     spent_time = issues.map {|i| i.time_entries.select {|ts| ts.user == @user}}.flatten.inject(0.0) {|sum, ts| sum += ts.hours}
     estimated_time = issues.inject(0.0) {|sum, i| i.estimated_hours ? sum += i.estimated_hours : sum}
     remain = estimated_time - spent_time
-    pie.values = [PieValue.new(spent_time, "#{l(:field_time_entry_hours)}:#{spent_time}"), 
-                  PieValue.new(remain > 0 ? remain : 0, "#{l(:label_hours_remaining)}:#{remain}")]
+    pie.values = [PieValue.new(spent_time, "#{l(:field_time_entry_hours)}:#{l_hour(spent_time)}"), 
+                  PieValue.new(remain > 0 ? remain : 0, "#{l(:label_hours_remaining)}:#{l_hour(remain)}")]
     chart = OpenFlashChart.new
-    chart.set_title(Title.new("#{@user.name} (#{l(:field_estimated_hours)}:#{estimated_time})"))
+    chart.set_title(Title.new("#{@user.name} (#{l(:field_estimated_hours)}:#{l_hour(estimated_time)})"))
+    chart.add_element(pie)
+    render :text => chart.to_s
+  end
+
+  def personal
+    @user = User.find(params[:user_id])
+    @project = Project.find(params[:id])
+    pie = Pie.new
+    pie.colours = ["#0000ff", "#006600"]
+    personal_estimated_tracker = Tracker.find(50)
+    issue = @project.issues.detect {|i| i.tracker == personal_estimated_tracker and i.assigned_to == @user}
+    spent_time = @project.time_entries.select {|ts| ts.user == @user}.inject(0.0) {|sum, ts| sum += ts.hours}
+    cf = CustomField.find(22)
+    estimated_time = cf.cast_value(issue.custom_values.detect {|cv|cv.custom_field_id==cf.id}.value)
+    remain = estimated_time - spent_time
+    pie.values = [PieValue.new(spent_time, "#{l(:field_time_entry_hours)}:#{l_hour(spent_time)}"), 
+                  PieValue.new(remain > 0 ? remain : 0, "#{l(:label_hours_remaining)}:#{l_hour(remain)}")]
+    chart = OpenFlashChart.new
+    chart.set_title(Title.new("#{@user.name} (#{l(:field_estimated_hours)}:#{l_hour(estimated_time)})"))
     chart.add_element(pie)
     render :text => chart.to_s
   end
@@ -175,9 +195,16 @@ class YojitsuController < ApplicationController
     @trackertime = open_flash_chart_object(300, 200, "/yojitsu/trackertime/#{params[:id]}")
     @activitytime = open_flash_chart_object(300, 200, "/yojitsu/activitytime/#{params[:id]}")
     @graph = open_flash_chart_object(900, 600, "/yojitsu/graph_code/#{params[:id]}")
-    @usertimes = @project.members \
-      .select {|u| @project.time_entries.map(&:user).include? u.user} \
-      .map {|u| open_flash_chart_object(300, 200, "/yojitsu/usertime/#{params[:id]}/#{u.user.id}")}
+
+    @usertimes = @project.issues \
+      .map(&:assigned_to).compact.uniq.sort \
+      .map {|u| open_flash_chart_object(300, 200, "/yojitsu/usertime/#{params[:id]}/#{u.id}")}
+
+    personal_estimated_tracker = Tracker.find(50)
+    @personal_estimated_hours = @project.issues \
+      .select {|i| i.tracker == personal_estimated_tracker} \
+      .sort_by(&:assigned_to) \
+      .map {|i| open_flash_chart_object(300, 200, "/yojitsu/personal/#{params[:id]}/#{i.assigned_to_id}")}
     
     @category_time_entries = {}
     @category_estimated_hours = {}

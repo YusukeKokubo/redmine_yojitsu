@@ -138,8 +138,13 @@
 <h3>時間の使い方履歴</h3>
 <%= @graph %>
 
-<h3>メンバーごとの予実</h3>
+<h3>担当チケットごとの予実</h3>
 <% @usertimes.each do |usertime| %>
+  <%= usertime %>
+<% end %>
+
+<h3>個人計画時間ごとの予実</h3>
+<% @personal_estimated_hours.each do |usertime| %>
   <%= usertime %>
 <% end %>
 
