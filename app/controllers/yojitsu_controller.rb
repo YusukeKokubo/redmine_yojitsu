@@ -214,28 +214,34 @@ class YojitsuController < ApplicationController
     @custom_spent_hours = {}
     nilCategory = IssueCategory.new(:name => "カテゴリなし")
     nilTracker = Tracker.new(:name => "Trackerなし")
+
+    @project.time_entries.each do |te|
+      issue = te.issue
+      category = issue.category || nilCategory
+      @category_time_entries[category] ||= 0
+      @category_time_entries[category] += te.hours if te.hours
+
+      tracker = issue.is_task? ? (issue.parent ? issue.parent.tracker : nilTracker) : issue.tracker
+      @tracker_time_entries[tracker] ||= 0
+      @tracker_time_entries[tracker] += te.hours
+
+      @activities_spent_hours[te.activity.name] ||= 0
+      @activities_spent_hours[te.activity.name] += te.hours
+      te.custom_values.each do |v|
+        @custom_spent_hours[v.custom_field.name] ||= {}
+        @custom_spent_hours[v.custom_field.name][v.value] ||= 0
+        @custom_spent_hours[v.custom_field.name][v.value] += te.hours
+      end
+    end
+
     @project.issues.each do |issue|
       next unless issue.leaf?
       category = issue.category || nilCategory
       @category_estimated_hours[category] ||= 0
       @category_estimated_hours[category] += issue.estimated_hours if issue.estimated_hours
-      @category_time_entries[category] ||= 0
-      @category_time_entries[category] += issue.spent_hours if issue.spent_hours
       tracker = issue.is_task? ? (issue.parent ? issue.parent.tracker : nilTracker) : issue.tracker
-      @tracker_time_entries[tracker] ||= 0
-      @tracker_time_entries[tracker] += issue.spent_hours
       @tracker_estimated_hours[tracker] ||= 0
       @tracker_estimated_hours[tracker] += issue.estimated_hours if issue.estimated_hours
-
-      issue.time_entries.each do |ts|
-        @activities_spent_hours[ts.activity.name] ||= 0
-        @activities_spent_hours[ts.activity.name] += ts.hours
-        ts.custom_values.each do |v|
-          @custom_spent_hours[v.custom_field.name] ||= {}
-          @custom_spent_hours[v.custom_field.name][v.value] ||= 0
-          @custom_spent_hours[v.custom_field.name][v.value] += ts.hours
-        end
-      end
     end
     @problem_issues = Issue.find(:all,
                                  :conditions => ["project_id = ? and tracker_id = ?", @project.id, 38])
