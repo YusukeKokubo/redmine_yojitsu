@@ -3,7 +3,7 @@ require 'set'
 class YojitsuController < ApplicationController
   unloadable
   include YojitsuHelper
-  before_filter :setup, :except => :usertime
+  before_filter :setup, :only => [:show, :graph_code]
 
   GraphColours = ["#0066ff", "#006600", "#3366ff", 
                   "#336600", "#6666ff", "#666600", 
