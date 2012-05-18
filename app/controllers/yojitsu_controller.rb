@@ -156,9 +156,8 @@ class YojitsuController < ApplicationController
     @project = Project.find(params[:id])
     pie = Pie.new
     pie.colours = ["#0000ff", "#006600"]
-    issues = @project.issues.select {|is| is.assigned_to == @user}
-    spent_time = issues.map {|i| i.time_entries.select {|ts| ts.user == @user}}.flatten.inject(0.0) {|sum, ts| sum += ts.hours}
-    estimated_time = issues.inject(0.0) {|sum, i| i.estimated_hours ? sum += i.estimated_hours : sum}
+    spent_time = @project.time_entries.select{|te|te.user == @user and te.issue.assigned_to == @user}.map(&:hours).inject(:+)
+    estimated_time = @project.issues.select{|is| is.assigned_to == @user}.select(&:leaf?).map(&:estimated_hours).compact.inject(:+)
     remain = estimated_time - spent_time
     pie.values = [PieValue.new(spent_time, "#{l(:field_time_entry_hours)}:#{l_hour(spent_time)}"), 
                   PieValue.new(remain > 0 ? remain : 0, "#{l(:label_hours_remaining)}:#{l_hour(remain)}")]
@@ -175,7 +174,7 @@ class YojitsuController < ApplicationController
     pie.colours = ["#0000ff", "#006600"]
     personal_estimated_tracker = Tracker.find(50)
     issue = @project.issues.detect {|i| i.tracker == personal_estimated_tracker and i.assigned_to == @user}
-    spent_time = @project.time_entries.select {|ts| ts.user == @user}.inject(0.0) {|sum, ts| sum += ts.hours}
+    spent_time = @project.time_entries.select {|ts| ts.user == @user}.map(&:hours).inject(:+)
     cf = CustomField.find(22)
     estimated_time = cf.cast_value(issue.custom_values.detect {|cv|cv.custom_field_id==cf.id}.value)
     remain = estimated_time - spent_time
