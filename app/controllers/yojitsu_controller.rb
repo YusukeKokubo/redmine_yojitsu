@@ -256,13 +256,10 @@ class YojitsuController < ApplicationController
     # rfp hours
     @total_rfp_hours = @project.custom_values[0] ? @project.custom_values[0].to_s.to_f : 0.0
 
-    @total_estimated_hours = 0.0
-    @total_spent_hours = 0.0
-    @project.issues.each do |i|
-      next unless i.leaf?
-      @total_estimated_hours += i.estimated_hours if i.estimated_hours
-      @total_spent_hours += i.spent_hours if i.spent_hours
-    end
+    @total_estimated_hours = @project.issues.select(&:leaf?).map(&:estimated_hours).compact.inject(:+)
+
+    @total_spent_hours = @project.time_entries.map(&:hours).inject(:+)
+
     @backlog = RbStory.product_backlog(@project)
     @issue_trackers = @project.trackers.all.delete_if {|t| t.id == RbTask.tracker or RbStory.trackers.include?(t.id) }
     @issues = RbStory.find(
