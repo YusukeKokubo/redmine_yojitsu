@@ -120,11 +120,11 @@ class YojitsuController < ApplicationController
 
     @time_entries = {}
     nilTracker = Tracker.new(:name => "Trackerなし")
-    @project.issues.each do |issue|
-      next unless issue.leaf?
+    @project.time_entries.each do |te|
+      issue = te.issue
       tracker = issue.is_task? ? (issue.parent ? issue.parent.tracker : nilTracker) : issue.tracker
       @time_entries[tracker] ||= 0
-      @time_entries[tracker] += issue.spent_hours
+      @time_entries[tracker] += te.hours
     end
 
     pie.values = @time_entries.map{|name, hour| PieValue.new(hour, "#{name}")}
@@ -140,13 +140,9 @@ class YojitsuController < ApplicationController
     pie.colours = GraphColours
 
     @spent_hours = {}
-    @project.issues.each do |issue|
-      next unless issue.leaf?
-      issue.time_entries.each do |ts|
-        @spent_hours[ts.activity.name] ||= 0
-        @spent_hours[ts.activity.name] += ts.hours
-      end
-    end
+    @project.time_entries \
+              .group_by{|te| te.activity.name} \
+              .each{|n, tes| @spent_hours[n] = tes.map(&:hours).inject(:+)}
 
     pie.values = @spent_hours.map{|name, hour| PieValue.new(hour, "#{name}")}
     chart = OpenFlashChart.new
