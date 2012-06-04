@@ -158,11 +158,11 @@ class YojitsuController < ApplicationController
     pie.colours = ["#0000ff", "#006600"]
     spent_time = @project.time_entries\
                     .select{|te|te.user == @user and te.issue.assigned_to == @user and te.issue.closed?}\
-                    .map(&:hours).inject(:+)
+                    .map(&:hours).inject(:+) || 0
     estimated_time = @project.issues\
                     .select{|is| is.assigned_to == @user and is.closed?}\
                     .select(&:leaf?)\
-                    .map(&:estimated_hours).compact.inject(:+)
+                    .map(&:estimated_hours).compact.inject(:+) || 0.0
     remain = estimated_time - spent_time
     pie.values = [PieValue.new(spent_time, "#{l(:field_time_entry_hours)}:#{l_hour(spent_time)}"), 
                   PieValue.new(remain > 0 ? remain : 0, "#{l(:label_hours_remaining)}:#{l_hour(remain)}")]
