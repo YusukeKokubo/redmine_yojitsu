@@ -1,7 +1,7 @@
 {[
-{milestone: 0, issues: [17,15]},
+{milestone: 0, issues: [15,17]},
 {milestone: 8, issues: [19,18,13,4]},
 {milestone: 7, issues: [16,5,1]},
-{milestone: 6, issues: [9,14]},
+{milestone: 6, issues: [14,9]},
 {milestone: 2, issues: [11]}
 ]}
