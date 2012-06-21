@@ -33,8 +33,8 @@ class YojitsuController < ApplicationController
     estimated_hours_line.dot_size = 5
     estimated_hours_line.colour = '#336600'
 
-    start_date = @project.time_entries.minimum('spent_on').to_date
-    end_date   = @project.time_entries.maximum('spent_on').to_date
+    start_date = (@project.time_entries.minimum('spent_on') || Date.new).to_date
+    end_date   = (@project.time_entries.maximum('spent_on') || Date.new).to_date
 
     # 開始週～終了週までをつくる
     @weeks = []
@@ -262,9 +262,9 @@ class YojitsuController < ApplicationController
     # rfp hours
     @total_rfp_hours = @project.custom_values[0] ? @project.custom_values[0].to_s.to_f : 0.0
 
-    @total_estimated_hours = @project.issues.select(&:leaf?).map(&:estimated_hours).compact.inject(:+)
+    @total_estimated_hours = @project.issues.select(&:leaf?).map(&:estimated_hours).compact.inject(:+) || 0.0
 
-    @total_spent_hours = @project.time_entries.map(&:hours).inject(:+)
+    @total_spent_hours = @project.time_entries.map(&:hours).inject(:+) || 0.0
 
     @backlog = RbStory.product_backlog(@project)
     @issue_trackers = @project.trackers.all.delete_if {|t| t.id == RbTask.tracker or RbStory.trackers.include?(t.id) }
