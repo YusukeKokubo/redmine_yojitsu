@@ -1,3 +1,4 @@
+# encoding: utf-8
 require 'set'
 
 class YojitsuController < ApplicationController
@@ -192,19 +193,19 @@ class YojitsuController < ApplicationController
   end
 
   def show
-    @trackertime = open_flash_chart_object(300, 200, "/yojitsu/trackertime/#{params[:id]}")
-    @activitytime = open_flash_chart_object(300, 200, "/yojitsu/activitytime/#{params[:id]}")
-    @graph = open_flash_chart_object(900, 600, "/yojitsu/graph_code/#{params[:id]}")
+    @trackertime = open_flash_chart_object(300, 200, url_for(:action => 'trackertime', :id => params[:id]))
+    @activitytime = open_flash_chart_object(300, 200, url_for(:action => 'activitytime', :id => params[:id]))
+    @graph = open_flash_chart_object(900, 600, url_for(:action => 'graph_code', :id => params[:id]))
 
     @usertimes = @project.issues \
       .map(&:assigned_to).compact.uniq.sort \
-      .map {|u| open_flash_chart_object(300, 200, "/yojitsu/assignee/#{params[:id]}/#{u.id}")}
+      .map {|u| open_flash_chart_object(300, 200, url_for(:action => 'assignee', :id => params[:id], :user_id => u.id))}
 
     personal_estimated_tracker = Tracker.find(50)
     @personal_estimated_hours = @project.issues \
       .select {|i| i.tracker == personal_estimated_tracker} \
       .sort_by(&:assigned_to) \
-      .map {|i| open_flash_chart_object(300, 200, "/yojitsu/personal/#{params[:id]}/#{i.assigned_to_id}")}
+      .map {|i| open_flash_chart_object(300, 200, url_for(:action => 'personal', :id => params[:id], :user_id => u.id))}
     
     @category_time_entries = {}
     @category_estimated_hours = {}
