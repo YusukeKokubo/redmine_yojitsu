@@ -205,7 +205,7 @@ class YojitsuController < ApplicationController
     @personal_estimated_hours = @project.issues \
       .select {|i| i.tracker == personal_estimated_tracker} \
       .sort_by(&:assigned_to) \
-      .map {|i| open_flash_chart_object(300, 200, url_for(:action => 'personal', :id => params[:id], :user_id => u.id))}
+      .map {|i| open_flash_chart_object(300, 200, url_for(:action => 'personal', :id => params[:id], :user_id => i.assigned_to.id))}
     
     @category_time_entries = {}
     @category_estimated_hours = {}
