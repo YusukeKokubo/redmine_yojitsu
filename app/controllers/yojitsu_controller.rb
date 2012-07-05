@@ -136,7 +136,7 @@ class YojitsuController < ApplicationController
     render :text => chart.to_s
   end
 
- def activitytime
+  def activitytime
     @project = Project.find(params[:id])
     pie = Pie.new
     pie.colours = GraphColours
@@ -171,7 +171,16 @@ class YojitsuController < ApplicationController
     chart.set_title(Title.new("#{@user.name} \n #{l(:field_estimated_hours)}:#{l_hour(estimated_time)} \n #{l(:field_spent_hours)}:#{l_hour(spent_time)}"))
     chart.add_element(bar)
     y_axis = YAxis.new
-    y_axis.set_range(0 - spent_time, spent_time, 1)
+    limit = remain.abs
+    step = case limit
+           when 0..10
+             1
+           when 10..120
+             10
+           else
+             50
+           end
+    y_axis.set_range(0 - (limit + step), limit + step, step)
     chart.set_y_axis(y_axis)
 
     render :text => chart.to_s
