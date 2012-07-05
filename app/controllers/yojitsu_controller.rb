@@ -11,7 +11,11 @@ class YojitsuController < ApplicationController
                   "#9966ff", "#cc66ff", "#cc6600"]
 
   def graph_code
-    title = Title.new("time entries history.")
+    time_history_graph("time entries history", @project.time_entries, @total_rfp_hours)
+  end
+
+  def time_history_graph(title, src_time_entries, total_rfp_hours)
+    title = Title.new(title)
 
     time_entries_line = Line.new
     time_entries_line.default_dot_style = Dot.new
@@ -34,17 +38,22 @@ class YojitsuController < ApplicationController
     estimated_hours_line.dot_size = 5
     estimated_hours_line.colour = '#336600'
 
-    start_date = (@project.time_entries.minimum('spent_on') || Date.new).to_date
-    end_date   = (@project.time_entries.maximum('spent_on') || Date.new).to_date
+    if src_time_entries.empty?
+      start_date = Date.new
+      end_date   = Date.new
+    else
+      start_date = src_time_entries.min_by(&:spent_on).spent_on
+      end_date   = src_time_entries.max_by(&:spent_on).spent_on
+    end
 
     # 開始週～終了週までをつくる
-    @weeks = []
+    weeks = []
     start_week, end_week = start_date.cweek, end_date.cweek
     if start_week <= end_week
-        start_week.upto(end_week) { |week| @weeks << week }
+        start_week.upto(end_week) { |week| weeks << week }
     else
-        start_week.upto(53) { |week| @weeks << week }
-        1.upto(end_week)    { |week| @weeks << week }
+        start_week.upto(53) { |week| weeks << week }
+        1.upto(end_week)    { |week| weeks << week }
     end
 
     # 週ごとに時間を計算する
@@ -54,9 +63,9 @@ class YojitsuController < ApplicationController
     rfp_hours = []
     estimated_hours = []
     labels = []
-    @weeks.each do |week|
-        ts = @project.time_entries.select { |t| t.spent_on.cweek == week }
-        total_time_spent += ts.inject(0.0) {|sum, t| sum + t.hours}
+    weeks.each do |week|
+        ts = src_time_entries.select { |t| t.spent_on.cweek == week }
+        total_time_spent += ts.map(&:hours).inject(:+) || 0.0
         ts.each do |time_entry|
           next unless time_entry.issue
           next unless time_entry.issue.leaf?
@@ -64,8 +73,8 @@ class YojitsuController < ApplicationController
           total_estimated_hours << time_entry.issue
         end
         time_entries << total_time_spent
-        estimated_hours << total_estimated_hours.inject(0.0) {|sum, i| sum + i.estimated_hours}
-        rfp_hours << @total_rfp_hours # 見積もり時間は固定
+        estimated_hours << total_estimated_hours.map(&:estimated_hours).compact.inject(:+) || 0.0
+        rfp_hours << total_rfp_hours # 見積もり時間は固定
 
         if ts.empty?
           labels << "-"
@@ -83,7 +92,7 @@ class YojitsuController < ApplicationController
     x.set_labels(x_labels)
 
     y = YAxis.new
-    y_max = [total_time_spent, @total_rfp_hours].max + 20
+    y_max = [total_time_spent, total_rfp_hours].max + 20
     y_step = case y_max
            when 0..100
                y_step = 10
@@ -96,16 +105,8 @@ class YojitsuController < ApplicationController
            end
     y.set_range(0, y_max, y_step)
 
-    x_legend = XLegend.new("days")
-    x_legend.set_style('{font-size: 20px; color: #778877}')
-
-    y_legend = YLegend.new("hours")
-    y_legend.set_style('{font-size: 20px; color: #770077}')
-
     chart = OpenFlashChart.new
     chart.set_title(title)
-    chart.set_x_legend(x_legend)
-    chart.set_y_legend(y_legend)
     chart.y_axis = y
     chart.x_axis = x
     chart.add_element(rfp_hours_line)
@@ -179,20 +180,12 @@ class YojitsuController < ApplicationController
   def personal
     @user = User.find(params[:user_id])
     @project = Project.find(params[:id])
-    pie = Pie.new
-    pie.colours = ["#0000ff", "#006600"]
+    time_entries = @project.time_entries.select {|ts| ts.user == @user}
     personal_estimated_tracker = Tracker.find(50)
-    issue = @project.issues.detect {|i| i.tracker == personal_estimated_tracker and i.assigned_to == @user}
-    spent_time = @project.time_entries.select {|ts| ts.user == @user}.map(&:hours).inject(:+)
     cf = CustomField.find(22)
-    estimated_time = cf.cast_value(issue.custom_values.detect {|cv|cv.custom_field_id==cf.id}.value)
-    remain = estimated_time - spent_time
-    pie.values = [PieValue.new(spent_time, "#{l(:field_time_entry_hours)}:#{l_hour(spent_time)}"), 
-                  PieValue.new(remain > 0 ? remain : 0, "#{l(:label_hours_remaining)}:#{l_hour(remain)}")]
-    chart = OpenFlashChart.new
-    chart.set_title(Title.new("#{@user.name} (#{l(:field_estimated_hours)}:#{l_hour(estimated_time)})"))
-    chart.add_element(pie)
-    render :text => chart.to_s
+    issue = @project.issues.detect {|i| i.tracker == personal_estimated_tracker and i.assigned_to == @user}
+    rfp_hours = cf.cast_value(issue.custom_values.detect {|cv|cv.custom_field_id==cf.id}.value)
+    time_history_graph(@user.name, time_entries, rfp_hours)
   end
 
   def show
@@ -208,7 +201,7 @@ class YojitsuController < ApplicationController
     @personal_estimated_hours = @project.issues \
       .select {|i| i.tracker == personal_estimated_tracker} \
       .sort_by(&:assigned_to) \
-      .map {|i| open_flash_chart_object(300, 200, url_for(:action => 'personal', :id => params[:id], :user_id => i.assigned_to.id))}
+      .map {|i| open_flash_chart_object(350, 300, url_for(:action => 'personal', :id => params[:id], :user_id => i.assigned_to.id))}
     
     @category_time_entries = {}
     @category_estimated_hours = {}
