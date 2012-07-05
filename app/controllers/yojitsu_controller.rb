@@ -155,8 +155,6 @@ class YojitsuController < ApplicationController
   def assignee
     @user = User.find(params[:user_id])
     @project = Project.find(params[:id])
-    pie = Pie.new
-    pie.colours = ["#0000ff", "#006600"]
     spent_time = @project.time_entries\
                     .select{|te|te.user == @user and te.issue.assigned_to == @user and te.issue.closed?}\
                     .map(&:hours).inject(:+) || 0
@@ -165,11 +163,16 @@ class YojitsuController < ApplicationController
                     .select(&:leaf?)\
                     .map(&:estimated_hours).compact.inject(:+) || 0.0
     remain = estimated_time - spent_time
-    pie.values = [PieValue.new(spent_time, "#{l(:field_time_entry_hours)}:#{l_hour(spent_time)}"), 
-                  PieValue.new(remain > 0 ? remain : 0, "#{l(:label_hours_remaining)}:#{l_hour(remain)}")]
+    bar = Bar.new
+    bar.colour = remain > 0 ? "#0000ff" : "#ff0000"
+    bar.values = [remain]
     chart = OpenFlashChart.new
-    chart.set_title(Title.new("#{@user.name} (#{l(:field_estimated_hours)}:#{l_hour(estimated_time)})"))
-    chart.add_element(pie)
+    chart.set_title(Title.new("#{@user.name} \n #{l(:field_estimated_hours)}:#{l_hour(estimated_time)} \n #{l(:field_spent_hours)}:#{l_hour(spent_time)}"))
+    chart.add_element(bar)
+    y_axis = YAxis.new
+    y_axis.set_range(0 - spent_time, spent_time, 1)
+    chart.set_y_axis(y_axis)
+
     render :text => chart.to_s
   end
 
@@ -199,7 +202,7 @@ class YojitsuController < ApplicationController
 
     @usertimes = @project.issues \
       .map(&:assigned_to).compact.uniq.sort \
-      .map {|u| open_flash_chart_object(300, 200, url_for(:action => 'assignee', :id => params[:id], :user_id => u.id))}
+      .map {|u| open_flash_chart_object(150, 350, url_for(:action => 'assignee', :id => params[:id], :user_id => u.id))}
 
     personal_estimated_tracker = Tracker.find(50)
     @personal_estimated_hours = @project.issues \
